@@ -24,7 +24,7 @@ BASELINE_PLOT_PATH = RESULTS_PLOTS_DIR / "baseline_metrics.png"
 
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 
-SUPPORTED_MODELS = ("resnet18", "mobilenet_v3_large")
+SUPPORTED_MODELS = ("resnet18", "mobilenet_v3_large", "swin_t")
 SUPPORTED_WEIGHTS = ("pretrained", "random")
 SUPPORTED_PRIVACY_MODES = ("none", "blur", "edges", "noise")
 
@@ -94,6 +94,7 @@ class BaselineExperimentConfig:
     max_samples_per_split: int | None = None
     smoke_test: bool = False
     run_suffix: str | None = None
+    log_interval: int = 50
 
     @classmethod
     def smoke_test_config(cls, **overrides) -> "BaselineExperimentConfig":
@@ -157,6 +158,27 @@ class BaselineExperimentConfig:
             prefetch_factor=2,
             smoke_test=False,
             run_suffix="gpu_tuned",
+        )
+        for key, value in overrides.items():
+            setattr(config, key, value)
+        return config
+
+    @classmethod
+    def swin_baseline_config(cls, **overrides) -> "BaselineExperimentConfig":
+        config = cls(
+            model="swin_t",
+            weights="pretrained",
+            privacy_mode="none",
+            privacy_intensity=0.0,
+            epochs=10,
+            batch_size=32,
+            image_size=224,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
+            smoke_test=False,
+            run_suffix="swin_baseline",
         )
         for key, value in overrides.items():
             setattr(config, key, value)
@@ -234,6 +256,8 @@ def build_train_command(
         str(config.seed),
         "--plot-path",
         str(config.plot_path),
+        "--log-interval",
+        str(config.log_interval),
     ]
 
     if config.pin_memory is True:

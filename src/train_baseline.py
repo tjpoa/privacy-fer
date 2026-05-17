@@ -25,8 +25,10 @@ from torchvision import transforms
 from torchvision.models import (
     MobileNet_V3_Large_Weights,
     ResNet18_Weights,
+    Swin_T_Weights,
     mobilenet_v3_large,
     resnet18,
+    swin_t,
 )
 
 try:
@@ -175,6 +177,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional suffix appended to artifact filenames for experiment tracking.",
     )
+    parser.add_argument(
+        "--log-interval",
+        type=int,
+        default=50,
+        help="Print progress every N batches. Use 0 to log only epoch summaries.",
+    )
     return parser.parse_args()
 
 
@@ -206,6 +214,12 @@ def build_model(model_name: str, num_classes: int, use_pretrained: bool) -> nn.M
         weights = MobileNet_V3_Large_Weights.DEFAULT if use_pretrained else None
         model = mobilenet_v3_large(weights=weights)
         model.classifier[-1] = nn.Linear(model.classifier[-1].in_features, num_classes)
+        return model
+
+    if model_name == "swin_t":
+        weights = Swin_T_Weights.DEFAULT if use_pretrained else None
+        model = swin_t(weights=weights)
+        model.head = nn.Linear(model.head.in_features, num_classes)
         return model
 
     raise ValueError(f"Unsupported model '{model_name}'.")
@@ -358,6 +372,10 @@ def run_epoch(
     device: torch.device,
     num_classes: int,
     optimizer: torch.optim.Optimizer | None = None,
+    epoch: int | None = None,
+    total_epochs: int | None = None,
+    split_name: str = "train",
+    log_interval: int = 50,
 ) -> dict[str, float]:
     is_training = optimizer is not None
     model.train(is_training)
@@ -366,8 +384,11 @@ def run_epoch(
     total_loss = 0.0
     all_targets: list[int] = []
     all_predictions: list[int] = []
+    split_start = time.time()
+    total_batches = len(dataloader)
+    total_samples = len(dataloader.dataset)
 
-    for images, targets in dataloader:
+    for batch_index, (images, targets) in enumerate(dataloader, start=1):
         images = images.to(device, non_blocking=non_blocking)
         targets = targets.to(device, non_blocking=non_blocking)
 
@@ -387,6 +408,28 @@ def run_epoch(
 
         all_targets.extend(targets.cpu().tolist())
         all_predictions.extend(predictions.cpu().tolist())
+
+        should_log = (
+            log_interval > 0
+            and (batch_index == 1 or batch_index % log_interval == 0 or batch_index == total_batches)
+        )
+        if should_log:
+            processed_samples = min(batch_index * dataloader.batch_size, total_samples)
+            average_loss = total_loss / processed_samples
+            elapsed_minutes = (time.time() - split_start) / 60
+            epoch_label = (
+                f"epoch={epoch:02d}/{total_epochs}"
+                if epoch is not None and total_epochs is not None
+                else "epoch=?"
+            )
+            print(
+                f"{split_name:<5} | {epoch_label} | "
+                f"batch={batch_index:04d}/{total_batches} | "
+                f"samples={processed_samples}/{total_samples} | "
+                f"avg_loss={average_loss:.4f} | "
+                f"elapsed={elapsed_minutes:.1f}m",
+                flush=True,
+            )
 
     metrics = compute_metrics(all_targets, all_predictions, num_classes=num_classes)
     metrics["loss"] = total_loss / len(dataloader.dataset)
@@ -627,6 +670,10 @@ def train(args: argparse.Namespace) -> None:
             device=device,
             num_classes=num_classes,
             optimizer=optimizer,
+            epoch=epoch,
+            total_epochs=args.epochs,
+            split_name="train",
+            log_interval=args.log_interval,
         )
         val_metrics = run_epoch(
             model=model,
@@ -635,6 +682,10 @@ def train(args: argparse.Namespace) -> None:
             device=device,
             num_classes=num_classes,
             optimizer=None,
+            epoch=epoch,
+            total_epochs=args.epochs,
+            split_name="val",
+            log_interval=args.log_interval,
         )
 
         history["train"].append(train_metrics)
