@@ -22,5 +22,6 @@ __pycache__/
 # Generated results
 /results/plots/*
 !/results/plots/.gitkeep
+/results/models/
 /results/checkpoints/*
 !/results/checkpoints/.gitkeep

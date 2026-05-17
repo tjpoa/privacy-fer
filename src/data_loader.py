@@ -11,21 +11,20 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 try:
+    from .configs import DEFAULT_DATA_ROOT
     from .privacy_filters import (
         apply_canny_edges,
         apply_diffusion_noise,
         apply_gaussian_blur,
     )
 except ImportError:
+    from configs import DEFAULT_DATA_ROOT
     from privacy_filters import (
         apply_canny_edges,
         apply_diffusion_noise,
         apply_gaussian_blur,
     )
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA_ROOT = PROJECT_ROOT / "data" / "raw" / "balanced-raf-db-dataset-7575-grayscale"
 SUPPORTED_SPLITS = ("train", "val", "test")
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"}
 ANNOTATION_CANDIDATES = (
