@@ -20,13 +20,15 @@ DEFAULT_DATA_ROOT = RAW_DATA_DIR / DEFAULT_DATASET_NAME
 RESULTS_DIR = PROJECT_ROOT / "results"
 RESULTS_MODELS_DIR = RESULTS_DIR / "models"
 RESULTS_PLOTS_DIR = RESULTS_DIR / "plots"
+RESULTS_TABLES_DIR = RESULTS_DIR / "tables"
+RESULTS_EVALUATIONS_DIR = RESULTS_DIR / "evaluations"
 BASELINE_PLOT_PATH = RESULTS_PLOTS_DIR / "baseline_metrics.png"
 
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 
-SUPPORTED_MODELS = ("resnet18", "mobilenet_v3_large", "swin_t")
+SUPPORTED_MODELS = ("resnet18", "mobilenet_v3_large", "swin_t", "vit_b_16")
 SUPPORTED_WEIGHTS = ("pretrained", "random")
-SUPPORTED_PRIVACY_MODES = ("none", "blur", "edges", "noise")
+SUPPORTED_PRIVACY_MODES = ("none", "blur", "crop", "mosaic", "edges", "noise")
 
 CLASS_NAMES = (
     "surprise",
@@ -72,6 +74,7 @@ def build_run_name(
 def ensure_results_dirs() -> tuple[Path, Path]:
     RESULTS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_TABLES_DIR.mkdir(parents=True, exist_ok=True)
     return RESULTS_MODELS_DIR, RESULTS_PLOTS_DIR
 
 
@@ -85,6 +88,7 @@ class BaselineExperimentConfig:
     batch_size: int = 32
     learning_rate: float = 1e-4
     weight_decay: float = 1e-4
+    label_smoothing: float = 0.0
     image_size: int = 224
     num_workers: int = 0
     pin_memory: bool | None = None
@@ -164,6 +168,27 @@ class BaselineExperimentConfig:
         return config
 
     @classmethod
+    def cnn_baseline_config(cls, **overrides) -> "BaselineExperimentConfig":
+        config = cls(
+            model="resnet18",
+            weights="pretrained",
+            privacy_mode="none",
+            privacy_intensity=0.0,
+            epochs=10,
+            batch_size=64,
+            image_size=224,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
+            smoke_test=False,
+            run_suffix="cnn_baseline",
+        )
+        for key, value in overrides.items():
+            setattr(config, key, value)
+        return config
+
+    @classmethod
     def swin_baseline_config(cls, **overrides) -> "BaselineExperimentConfig":
         config = cls(
             model="swin_t",
@@ -179,6 +204,98 @@ class BaselineExperimentConfig:
             prefetch_factor=2,
             smoke_test=False,
             run_suffix="swin_baseline",
+        )
+        for key, value in overrides.items():
+            setattr(config, key, value)
+        return config
+
+    @classmethod
+    def vit_baseline_config(cls, **overrides) -> "BaselineExperimentConfig":
+        config = cls(
+            model="vit_b_16",
+            weights="pretrained",
+            privacy_mode="none",
+            privacy_intensity=0.0,
+            epochs=10,
+            batch_size=24,
+            image_size=224,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
+            smoke_test=False,
+            run_suffix="vit_baseline",
+        )
+        for key, value in overrides.items():
+            setattr(config, key, value)
+        return config
+
+    @classmethod
+    def light_finetune_config(cls, model: str, **overrides) -> "BaselineExperimentConfig":
+        model_settings = {
+            "resnet18": {"batch_size": 64, "run_suffix": "light_ft_resnet"},
+            "swin_t": {"batch_size": 32, "run_suffix": "light_ft_swin"},
+            "vit_b_16": {"batch_size": 24, "run_suffix": "light_ft_vit"},
+        }
+        if model not in model_settings:
+            raise ValueError(
+                "Light fine-tuning is configured for: resnet18, swin_t, vit_b_16."
+            )
+
+        settings = model_settings[model]
+        config = cls(
+            model=model,
+            weights="pretrained",
+            privacy_mode="none",
+            privacy_intensity=0.0,
+            epochs=12,
+            batch_size=settings["batch_size"],
+            learning_rate=5e-5,
+            weight_decay=5e-5,
+            label_smoothing=0.05,
+            image_size=224,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
+            smoke_test=False,
+            run_suffix=settings["run_suffix"],
+        )
+        for key, value in overrides.items():
+            setattr(config, key, value)
+        return config
+
+    @classmethod
+    def deid_experiment_config(
+        cls,
+        model: str,
+        privacy_mode: str,
+        privacy_intensity: float,
+        **overrides,
+    ) -> "BaselineExperimentConfig":
+        model_settings = {
+            "resnet18": {"batch_size": 64},
+            "mobilenet_v3_large": {"batch_size": 64},
+            "swin_t": {"batch_size": 32},
+            "vit_b_16": {"batch_size": 24},
+        }
+        if model not in model_settings:
+            raise ValueError(f"Unsupported de-id model '{model}'.")
+
+        config = cls(
+            model=model,
+            weights="pretrained",
+            privacy_mode=privacy_mode,
+            privacy_intensity=privacy_intensity,
+            epochs=10,
+            batch_size=model_settings[model]["batch_size"],
+            image_size=224,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True,
+            prefetch_factor=2,
+            smoke_test=False,
+            run_suffix="deid",
         )
         for key, value in overrides.items():
             setattr(config, key, value)
@@ -244,6 +361,8 @@ def build_train_command(
         str(config.learning_rate),
         "--weight-decay",
         str(config.weight_decay),
+        "--label-smoothing",
+        str(config.label_smoothing),
         "--num-workers",
         str(config.num_workers),
         "--image-size",

@@ -1,16 +1,10 @@
 # Privacy-Preserving Facial Expression Recognition
 
-Base Python project for researching facial expression recognition with privacy-preserving filters applied to the input images.
+Python project for studying facial expression recognition under simple privacy-preserving transformations.
 
-## Objective
+The project compares classification utility, visual de-identification and ViT attention behaviour on a grayscale RAF-DB style dataset.
 
-This repository is a starting point for Machine Learning experiments focused on:
-
-- facial expression classification;
-- applying privacy transformations before training or inference;
-- comparing model utility with visual privacy preservation.
-
-## Current Structure
+## Project Structure
 
 ```text
 privacy-fer/
@@ -18,54 +12,77 @@ privacy-fer/
 |   |-- raw/
 |   |-- processed/
 |-- notebooks/
+|   |-- 01_EDA.ipynb
+|   |-- 02_Modeling.ipynb
+|   |-- 03_Privacy.ipynb
+|   |-- 04_AttentionAnalysis.ipynb
 |-- results/
+|   |-- models/
 |   |-- plots/
-|   |-- checkpoints/
+|   |-- tables/
 |-- src/
+|   |-- attention_analysis.py
+|   |-- attention_reporting.py
+|   |-- baseline_reporting.py
+|   |-- configs.py
+|   |-- data_loader.py
+|   |-- download_dataset.py
+|   |-- eda_reporting.py
+|   |-- landmark_attention_analysis.py
 |   |-- privacy_filters.py
-|-- download_dataset.py
+|   |-- privacy_reporting.py
+|   |-- train_baseline.py
+|-- check_data_loader.py
+|-- train.py
+|-- evaluate.py
+|-- make_plots.py
+|-- validate_fairness.py
 |-- requirements.txt
-|-- .gitignore
 ```
 
-## Virtual Environment
+## Official Pipeline
+
+Use these files as the reproducible project pipeline:
+
+- `train.py`: train ResNet18, MobileNetV3-Large, Swin-T or ViT-B/16.
+- `check_data_loader.py`: run a quick sanity check for `RAFDataset`, privacy filters and DataLoader batches.
+- `evaluate.py`: evaluate a saved checkpoint on `train`, `val` or `test`.
+- `make_plots.py`: regenerate the final reporting tables and figures.
+- `validate_fairness.py`: verify split consistency, transformation consistency and validation-first selection evidence.
+- `notebooks/01_EDA.ipynb`: inspect raw dataset structure, balance and image properties.
+- `notebooks/02_Modeling.ipynb`: inspect plots and optionally launch baseline/fine-tuning runs using `src/baseline_reporting.py`.
+- `notebooks/03_Privacy.ipynb`: inspect fixed de-identification experiments using `src/privacy_reporting.py`.
+- `notebooks/04_AttentionAnalysis.ipynb`: qualitative and quantitative ViT attention/landmark analysis.
+
+Generated checkpoints, plots and evaluation scratch files are ignored by Git. The report-ready numeric outputs are kept in `results/tables/`.
+
+## Environment Setup
 
 In Windows PowerShell:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-## Dependencies
+If you use VS Code notebooks, select the `.venv` kernel.
 
-The project currently uses:
+## Dataset Setup
 
-- `opencv-python`
-- `torch`
-- `torchvision`
-- `timm`
-- `matplotlib`
-- `pandas`
-- `scikit-learn`
-- `kagglehub`
+The dataset used in this project is:
 
-## Dataset
+```text
+dollyprajapati182/balanced-raf-db-dataset-7575-grayscale
+```
 
-The current dataset is downloaded from Kaggle:
-
-- dataset: `dollyprajapati182/balanced-raf-db-dataset-7575-grayscale`
-- script: [`download_dataset.py`](./download_dataset.py)
-
-To download and copy the dataset into `data/raw`:
+Download and copy it into `data/raw`:
 
 ```powershell
-.\.venv\Scripts\Activate.ps1
-python download_dataset.py
+.\.venv\Scripts\python.exe .\src\download_dataset.py
 ```
 
-Expected destination:
+Expected structure:
 
 ```text
 data/raw/balanced-raf-db-dataset-7575-grayscale/
@@ -74,13 +91,211 @@ data/raw/balanced-raf-db-dataset-7575-grayscale/
 |-- test/
 ```
 
-## Base Code
+Run the DataLoader sanity check after downloading the dataset:
 
-- [`src/privacy_filters.py`](./src/privacy_filters.py) contains the initial placeholders for privacy filters such as blur, canny edges, and diffusion noise.
+```powershell
+.\.venv\Scripts\python.exe .\check_data_loader.py
+```
 
-## Next Steps
+This checks split sizes, class ordering, metadata, privacy filters and one train-ready batch.
 
-- implement the privacy filters;
-- create a data loading and preprocessing pipeline;
-- define the baseline model for expression classification;
-- store metrics, checkpoints, and plots in `results/`.
+## Training
+
+Use `train.py` as the main training entrypoint.
+
+Example clean ResNet18 run:
+
+```powershell
+.\.venv\Scripts\python.exe .\train.py `
+  --model resnet18 `
+  --weights pretrained `
+  --privacy-mode none `
+  --privacy-intensity 0 `
+  --epochs 10 `
+  --batch-size 64 `
+  --num-workers 4 `
+  --pin-memory `
+  --persistent-workers `
+  --prefetch-factor 2 `
+  --run-suffix cnn_baseline
+```
+
+Example crop/context removal run:
+
+```powershell
+.\.venv\Scripts\python.exe .\train.py `
+  --model resnet18 `
+  --weights pretrained `
+  --privacy-mode crop `
+  --privacy-intensity 0.75 `
+  --epochs 10 `
+  --batch-size 64 `
+  --num-workers 4 `
+  --pin-memory `
+  --persistent-workers `
+  --prefetch-factor 2 `
+  --run-suffix fixed_deid
+```
+
+Quick smoke test:
+
+```powershell
+.\.venv\Scripts\python.exe .\train.py `
+  --model resnet18 `
+  --epochs 1 `
+  --batch-size 8 `
+  --max-samples-per-split 64 `
+  --run-suffix smokecheck
+```
+
+Each training run saves:
+
+```text
+results/models/<run_name>_best.pt
+results/models/<run_name>_metrics.json
+results/models/<run_name>_config.json
+results/models/<run_name>_classification_report.txt
+results/plots/<run_name>_metrics.png
+```
+
+## Evaluation
+
+Use `evaluate.py` to evaluate an existing checkpoint on `train`, `val` or `test`.
+
+```powershell
+.\.venv\Scripts\python.exe .\evaluate.py `
+  --checkpoint .\results\models\resnet18_none_0p0_cnn_baseline_best.pt `
+  --split test
+```
+
+Evaluation outputs:
+
+```text
+results/evaluations/<run_name>_<split>_evaluation_metrics.json
+results/evaluations/<run_name>_<split>_evaluation_classification_report.txt
+results/evaluations/<run_name>_<split>_evaluation_confusion_matrix.csv
+results/tables/evaluation_runs.csv
+```
+
+These evaluation files are treated as scratch outputs and are ignored by Git. Use `make_plots.py` for the final consolidated tables.
+
+## Final Tables And Plots
+
+Use `make_plots.py` to regenerate the final CSV tables and final figures from saved metrics.
+
+```powershell
+.\.venv\Scripts\python.exe .\make_plots.py
+```
+
+Generated tables:
+
+```text
+results/tables/results_summary.csv
+results/tables/final_model_results.csv
+results/tables/final_results_by_transformation.csv
+results/tables/best_run_per_model_and_transformation.csv
+```
+
+`results_summary.csv` and `final_model_results.csv` include:
+
+```text
+model, accuracy, precision, recall, macro_f1, transformation, privacy_mode, privacy_intensity
+```
+
+The transformation groups are:
+
+```text
+baseline_clean
+crop_context_removal
+blur
+mosaic
+canny
+noise
+```
+
+Generated plots:
+
+```text
+results/plots/precision_recall_f1_by_model.png
+results/plots/confusion_matrix_by_emotion.png
+results/plots/recall_by_emotion.png
+results/plots/macro_f1_drop_by_transformation.png
+results/plots/transformation_examples.png
+```
+
+## Fairness Validation
+
+Use `validate_fairness.py` to check whether comparisons use the same split samples and the same transformation pipeline.
+
+```powershell
+.\.venv\Scripts\python.exe .\validate_fairness.py
+```
+
+Generated validation reports:
+
+```text
+results/tables/fairness_validation.csv
+results/tables/fairness_validation_report.json
+results/tables/fairness_validation_report.md
+```
+
+The validation checks:
+
+- the same train/val/test samples are used across transformations;
+- class distributions are unchanged by privacy filters;
+- `results_summary.csv` has the required reporting columns;
+- validation metrics are available for privacy parameter selection;
+- test metrics are separated for final reporting.
+
+## Attention And Landmark Analysis
+
+The main attention analysis is in:
+
+```text
+notebooks/04_AttentionAnalysis.ipynb
+```
+
+It uses:
+
+```text
+src/attention_analysis.py
+src/attention_reporting.py
+src/landmark_attention_analysis.py
+```
+
+Optional MediaPipe Face Landmarker setup:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+mkdir models
+```
+
+Place the model file here:
+
+```text
+models/face_landmarker.task
+```
+
+The attention notebook can generate:
+
+```text
+results/vit_attention_predictions.csv
+results/vit_attention_selected_examples_class_balanced.csv
+results/vit_attention_metrics_class_balanced.csv
+results/vit_inverse_attention_masking_class_balanced.csv
+results/vit_landmark_region_attention_class_balanced.csv
+results/plots/vit_attention_analysis/class_balanced/
+results/plots/vit_attention_analysis/class_balanced/inverse_attention_masking/
+```
+
+## Reproducibility Notes
+
+- Training uses fixed seeds through `--seed`.
+- Each training run saves a separate `*_config.json`.
+- Metrics are saved in JSON and consolidated into CSV tables.
+- Final plots can be regenerated with `make_plots.py`.
+- Avoid selecting final hyperparameters from the test set. Use validation results for selection and reserve test results for final reporting.
+
+## Current Main Finding
+
+The current strongest result is that `crop/context removal` preserves classification performance best while still applying a simple de-identification transformation. `Mosaic` is useful as a strong perturbation, but it reduces utility too much to be the main solution.

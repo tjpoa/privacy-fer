@@ -53,6 +53,24 @@ def apply_gaussian_blur(image: np.ndarray, level: float) -> np.ndarray:
     return cv2.GaussianBlur(image, (kernel_size, kernel_size), sigmaX=float(level))
 
 
+def apply_center_crop(image: np.ndarray, keep_ratio: float) -> np.ndarray:
+    image = _validate_image(image)
+
+    if keep_ratio <= 0 or keep_ratio > 1:
+        raise ValueError("keep_ratio must be in the interval (0, 1].")
+    if keep_ratio == 1:
+        return image.copy()
+
+    height, width = image.shape[:2]
+    crop_height = max(1, int(round(height * keep_ratio)))
+    crop_width = max(1, int(round(width * keep_ratio)))
+    top = (height - crop_height) // 2
+    left = (width - crop_width) // 2
+
+    cropped = image[top : top + crop_height, left : left + crop_width]
+    return cv2.resize(cropped, (width, height), interpolation=cv2.INTER_LINEAR)
+
+
 def apply_canny_edges(image: np.ndarray) -> np.ndarray:
     image = _validate_image(image)
 
@@ -72,6 +90,23 @@ def apply_canny_edges(image: np.ndarray) -> np.ndarray:
         upper = min(255, lower + 50)
 
     return cv2.Canny(grayscale, threshold1=lower, threshold2=upper)
+
+
+def apply_mosaic(image: np.ndarray, block_size: float) -> np.ndarray:
+    image = _validate_image(image)
+
+    block_size = int(round(block_size))
+    if block_size < 1:
+        raise ValueError("block_size must be at least 1.")
+    if block_size == 1:
+        return image.copy()
+
+    height, width = image.shape[:2]
+    small_width = max(1, width // block_size)
+    small_height = max(1, height // block_size)
+
+    small = cv2.resize(image, (small_width, small_height), interpolation=cv2.INTER_LINEAR)
+    return cv2.resize(small, (width, height), interpolation=cv2.INTER_NEAREST)
 
 
 def apply_diffusion_noise(image: np.ndarray, t_step: float) -> np.ndarray:

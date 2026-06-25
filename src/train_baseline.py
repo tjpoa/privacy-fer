@@ -14,6 +14,7 @@ import torch
 from PIL import Image
 from sklearn.metrics import (
     accuracy_score,
+    balanced_accuracy_score,
     classification_report,
     confusion_matrix,
     precision_recall_fscore_support,
@@ -26,9 +27,11 @@ from torchvision.models import (
     MobileNet_V3_Large_Weights,
     ResNet18_Weights,
     Swin_T_Weights,
+    ViT_B_16_Weights,
     mobilenet_v3_large,
     resnet18,
     swin_t,
+    vit_b_16,
 )
 
 try:
@@ -102,6 +105,12 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=1e-4,
         help="Weight decay for AdamW.",
+    )
+    parser.add_argument(
+        "--label-smoothing",
+        type=float,
+        default=0.0,
+        help="Label smoothing passed to cross-entropy loss.",
     )
     parser.add_argument(
         "--num-workers",
@@ -220,6 +229,12 @@ def build_model(model_name: str, num_classes: int, use_pretrained: bool) -> nn.M
         weights = Swin_T_Weights.DEFAULT if use_pretrained else None
         model = swin_t(weights=weights)
         model.head = nn.Linear(model.head.in_features, num_classes)
+        return model
+
+    if model_name == "vit_b_16":
+        weights = ViT_B_16_Weights.DEFAULT if use_pretrained else None
+        model = vit_b_16(weights=weights)
+        model.heads.head = nn.Linear(model.heads.head.in_features, num_classes)
         return model
 
     raise ValueError(f"Unsupported model '{model_name}'.")
@@ -356,6 +371,7 @@ def compute_metrics(
 
     return {
         "accuracy": float(accuracy_score(targets, predictions)),
+        "balanced_accuracy": float(balanced_accuracy_score(targets, predictions)),
         "precision_macro": float(precision_macro),
         "recall_macro": float(recall_macro),
         "f1_macro": float(f1_macro),
@@ -515,10 +531,10 @@ def plot_results(
 
     metric_names = [
         "accuracy",
+        "balanced_accuracy",
         "precision_macro",
         "recall_macro",
         "f1_macro",
-        "f1_weighted",
     ]
     metric_values = [test_metrics[name] for name in metric_names]
     axes[1, 0].bar(metric_names, metric_values, color="#355070")
@@ -567,10 +583,11 @@ def save_training_artifacts(
     args: argparse.Namespace,
     history: dict[str, list[dict[str, float]]],
     test_metrics: dict[str, float],
+    confusion: np.ndarray,
     test_report: str,
     class_names: list[str],
     best_epoch: int,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, Path]:
     RESULTS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
     run_name = build_run_name(
         normalize_model_name(args.model),
@@ -581,6 +598,7 @@ def save_training_artifacts(
 
     checkpoint_path = RESULTS_MODELS_DIR / f"{run_name}_best.pt"
     metrics_path = RESULTS_MODELS_DIR / f"{run_name}_metrics.json"
+    config_path = RESULTS_MODELS_DIR / f"{run_name}_config.json"
     report_path = RESULTS_MODELS_DIR / f"{run_name}_classification_report.txt"
 
     torch.save(
@@ -595,6 +613,9 @@ def save_training_artifacts(
             "batch_size": args.batch_size,
             "image_size": args.image_size,
             "num_workers": args.num_workers,
+            "learning_rate": args.learning_rate,
+            "weight_decay": args.weight_decay,
+            "label_smoothing": args.label_smoothing,
             "pin_memory": resolve_pin_memory(args),
             "persistent_workers": bool(args.num_workers > 0 and args.persistent_workers),
             "prefetch_factor": args.prefetch_factor if args.num_workers > 0 else None,
@@ -602,6 +623,7 @@ def save_training_artifacts(
             "class_names": class_names,
             "history": history,
             "test_metrics": test_metrics,
+            "confusion_matrix": confusion.tolist(),
         },
         checkpoint_path,
     )
@@ -613,19 +635,57 @@ def save_training_artifacts(
         "privacy_intensity": args.privacy_intensity,
         "run_name": run_name,
         "run_suffix": args.run_suffix,
+        "seed": args.seed,
+        "data_root": str(args.data_root),
         "best_epoch": best_epoch,
         "batch_size": args.batch_size,
         "image_size": args.image_size,
         "num_workers": args.num_workers,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "label_smoothing": args.label_smoothing,
         "pin_memory": resolve_pin_memory(args),
         "persistent_workers": bool(args.num_workers > 0 and args.persistent_workers),
         "prefetch_factor": args.prefetch_factor if args.num_workers > 0 else None,
+        "max_samples_per_split": args.max_samples_per_split,
+        "plot_path": str(args.plot_path),
+        "checkpoint_path": str(checkpoint_path),
+        "report_path": str(report_path),
+        "class_names": class_names,
         "history": history,
         "test_metrics": test_metrics,
+        "confusion_matrix": confusion.tolist(),
+    }
+    config_payload = {
+        "model": normalize_model_name(args.model),
+        "weights": args.weights,
+        "privacy_mode": args.privacy_mode,
+        "privacy_intensity": args.privacy_intensity,
+        "run_name": run_name,
+        "run_suffix": args.run_suffix,
+        "seed": args.seed,
+        "data_root": str(args.data_root),
+        "epochs": args.epochs,
+        "batch_size": args.batch_size,
+        "image_size": args.image_size,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "label_smoothing": args.label_smoothing,
+        "num_workers": args.num_workers,
+        "pin_memory": resolve_pin_memory(args),
+        "persistent_workers": bool(args.num_workers > 0 and args.persistent_workers),
+        "prefetch_factor": args.prefetch_factor if args.num_workers > 0 else None,
+        "max_samples_per_split": args.max_samples_per_split,
+        "log_interval": args.log_interval,
+        "plot_path": str(args.plot_path),
+        "metrics_path": str(metrics_path),
+        "checkpoint_path": str(checkpoint_path),
+        "report_path": str(report_path),
     }
     metrics_path.write_text(json.dumps(metrics_payload, indent=2), encoding="utf-8")
+    config_path.write_text(json.dumps(config_payload, indent=2), encoding="utf-8")
     report_path.write_text(test_report, encoding="utf-8")
-    return checkpoint_path, metrics_path
+    return checkpoint_path, metrics_path, config_path
 
 
 def train(args: argparse.Namespace) -> None:
@@ -649,7 +709,7 @@ def train(args: argparse.Namespace) -> None:
         f"prefetch_factor={args.prefetch_factor if args.num_workers > 0 else None}"
     )
 
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
     optimizer = AdamW(
         model.parameters(),
         lr=args.learning_rate,
@@ -663,6 +723,8 @@ def train(args: argparse.Namespace) -> None:
 
     start_time = time.time()
     for epoch in range(1, args.epochs + 1):
+        print()
+        print(f"Epoch {epoch:02d}/{args.epochs} - TRAIN", flush=True)
         train_metrics = run_epoch(
             model=model,
             dataloader=dataloaders["train"],
@@ -675,6 +737,8 @@ def train(args: argparse.Namespace) -> None:
             split_name="train",
             log_interval=args.log_interval,
         )
+
+        print(f"Epoch {epoch:02d}/{args.epochs} - VALIDATION", flush=True)
         val_metrics = run_epoch(
             model=model,
             dataloader=dataloaders["val"],
@@ -692,12 +756,13 @@ def train(args: argparse.Namespace) -> None:
         history["val"].append(val_metrics)
 
         print(
-            f"Epoch {epoch:02d}/{args.epochs} | "
+            f"Epoch {epoch:02d}/{args.epochs} - SUMMARY | "
             f"train_loss={train_metrics['loss']:.4f} | "
             f"train_acc={train_metrics['accuracy']:.4f} | "
             f"val_loss={val_metrics['loss']:.4f} | "
             f"val_acc={val_metrics['accuracy']:.4f} | "
-            f"val_f1_macro={val_metrics['f1_macro']:.4f}"
+            f"val_f1_macro={val_metrics['f1_macro']:.4f}",
+            flush=True,
         )
 
         if val_metrics["f1_macro"] > best_val_f1:
@@ -721,11 +786,12 @@ def train(args: argparse.Namespace) -> None:
         class_names=class_names,
     )
 
-    checkpoint_path, metrics_path = save_training_artifacts(
+    checkpoint_path, metrics_path, config_path = save_training_artifacts(
         model=model,
         args=args,
         history=history,
         test_metrics=test_metrics,
+        confusion=confusion,
         test_report=report,
         class_names=class_names,
         best_epoch=best_epoch,
@@ -752,6 +818,7 @@ def train(args: argparse.Namespace) -> None:
     print(f"Plot saved to: {args.plot_path}")
     print(f"Model checkpoint saved to: {checkpoint_path}")
     print(f"Metrics saved to: {metrics_path}")
+    print(f"Config saved to: {config_path}")
     print(f"Elapsed time: {elapsed_seconds / 60:.2f} minutes")
     print()
     print("Test metrics:")

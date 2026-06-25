@@ -3,6 +3,10 @@ torch
 torchvision
 timm
 matplotlib
+numpy
 pandas
+Pillow
 scikit-learn
 kagglehub
+mediapipe
+ipykernel

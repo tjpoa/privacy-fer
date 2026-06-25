@@ -14,15 +14,19 @@ try:
     from .configs import DEFAULT_DATA_ROOT
     from .privacy_filters import (
         apply_canny_edges,
+        apply_center_crop,
         apply_diffusion_noise,
         apply_gaussian_blur,
+        apply_mosaic,
     )
 except ImportError:
     from configs import DEFAULT_DATA_ROOT
     from privacy_filters import (
         apply_canny_edges,
+        apply_center_crop,
         apply_diffusion_noise,
         apply_gaussian_blur,
+        apply_mosaic,
     )
 
 SUPPORTED_SPLITS = ("train", "val", "test")
@@ -196,6 +200,12 @@ class RAFDataset(Dataset):
             "edges": "edges",
             "canny": "edges",
             "canny_edges": "edges",
+            "crop": "crop",
+            "center_crop": "crop",
+            "central_crop": "crop",
+            "mosaic": "mosaic",
+            "pixelate": "mosaic",
+            "pixelation": "mosaic",
             "noise": "noise",
             "diffusion": "noise",
             "diffusion_noise": "noise",
@@ -203,7 +213,7 @@ class RAFDataset(Dataset):
 
         if normalized not in mode_aliases:
             raise ValueError(
-                "Unsupported privacy mode. Use one of: none, blur, edges, noise."
+                "Unsupported privacy mode. Use one of: none, blur, crop, mosaic, edges, noise."
             )
 
         return mode_aliases[normalized]
@@ -378,6 +388,10 @@ class RAFDataset(Dataset):
             return image
         if self.mode == "blur":
             return apply_gaussian_blur(image, self.intensity)
+        if self.mode == "crop":
+            return apply_center_crop(image, self.intensity)
+        if self.mode == "mosaic":
+            return apply_mosaic(image, self.intensity)
         if self.mode == "edges":
             return apply_canny_edges(image)
         if self.mode == "noise":
