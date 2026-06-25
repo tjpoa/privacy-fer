@@ -1,11 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import torch
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from src.configs import CLASS_NAMES, DEFAULT_DATA_ROOT
-from src.data_loader import RAFDataset, create_data_loader
+from src.data.loader import RAFDataset, create_data_loader
 
 
 SPLITS = ("train", "val", "test")

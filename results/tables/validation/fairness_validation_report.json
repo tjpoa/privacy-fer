@@ -107,7 +107,7 @@
   {
     "check": "results_summary_exists",
     "status": "PASS",
-    "evidence": "C:\\Users\\Tiago\\Documents\\GitHub\\privacy-fer\\results\\tables\\results_summary.csv rows=17"
+    "evidence": "C:\\Users\\Tiago\\Documents\\GitHub\\privacy-fer\\results\\tables\\final\\results_summary.csv rows=17"
   },
   {
     "check": "results_summary_required_columns",
@@ -122,16 +122,16 @@
   {
     "check": "privacy_parameter_selection_has_validation_columns",
     "status": "PASS",
-    "evidence": "results\\deid_proxy_selection.csv; columns=group,run_name,model,privacy_mode,privacy_intensity,best_epoch,epochs,batch_size,num_workers,metrics_path,val_accuracy,val_precision_macro,val_recall_macro,val_f1_macro,val_precision_weighted,val_recall_weighted,val_f1_weighted,val_loss,test_accuracy,test_precision_macro,test_recall_macro,test_f1_macro,test_precision_weighted,test_recall_weighted,test_f1_weighted,test_loss,privacy_score,val_f1_drop,within_drop_limit"
+    "evidence": "results\\tables\\intermediate\\deid_proxy_selection.csv; columns=group,run_name,model,privacy_mode,privacy_intensity,best_epoch,epochs,batch_size,num_workers,metrics_path,val_accuracy,val_precision_macro,val_recall_macro,val_f1_macro,val_precision_weighted,val_recall_weighted,val_f1_weighted,val_loss,test_accuracy,test_precision_macro,test_recall_macro,test_f1_macro,test_precision_weighted,test_recall_weighted,test_f1_weighted,test_loss,privacy_score,val_f1_drop,within_drop_limit"
   },
   {
     "check": "final_deid_table_separates_validation_and_test_metrics",
     "status": "PASS",
-    "evidence": "results\\deid_fixed_comparison.csv; rows=9"
+    "evidence": "results\\tables\\intermediate\\deid_fixed_comparison.csv; rows=9"
   },
   {
     "check": "test_set_not_used_for_tuning",
     "status": "WARN",
-    "evidence": "Code-level evidence supports validation-based selection: train_baseline.py selects best_epoch using validation macro-F1 and deid_proxy_selection.csv contains validation selection columns. Human notebook decisions cannot be fully proven from artifacts alone; report should state that parameter choices are based on validation metrics and test is reserved for final reporting."
+    "evidence": "Code-level evidence supports validation-based selection: src/modeling/training.py selects best_epoch using validation macro-F1 and deid_proxy_selection.csv contains validation selection columns. Human notebook decisions cannot be fully proven from artifacts alone; report should state that parameter choices are based on validation metrics and test is reserved for final reporting."
   }
 ]

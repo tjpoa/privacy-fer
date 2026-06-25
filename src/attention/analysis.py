@@ -12,15 +12,15 @@ import torch
 from torch.utils.data import DataLoader, Subset
 
 try:
-    from .configs import CLASS_NAMES, DEFAULT_DATA_ROOT
-    from .data_loader import RAFDataset
-    from .privacy_filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
-    from .train_baseline import NumpyToImageNetTensor, build_model
+    from ..configs import CLASS_NAMES, DEFAULT_DATA_ROOT
+    from ..data.loader import RAFDataset
+    from ..privacy.filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
+    from ..modeling.training import NumpyToImageNetTensor, build_model
 except ImportError:
-    from configs import CLASS_NAMES, DEFAULT_DATA_ROOT
-    from data_loader import RAFDataset
-    from privacy_filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
-    from train_baseline import NumpyToImageNetTensor, build_model
+    from src.configs import CLASS_NAMES, DEFAULT_DATA_ROOT
+    from src.data.loader import RAFDataset
+    from src.privacy.filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
+    from src.modeling.training import NumpyToImageNetTensor, build_model
 
 
 @dataclass(frozen=True)

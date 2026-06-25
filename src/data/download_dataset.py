@@ -20,7 +20,7 @@ def copy_dataset(source: Path, destination: Path) -> None:
 
 
 def main() -> None:
-    project_root = Path(__file__).resolve().parent
+    project_root = Path(__file__).resolve().parents[2]
     destination = project_root / TARGET_FOLDER
     source = Path(kagglehub.dataset_download(DATASET_HANDLE))
 

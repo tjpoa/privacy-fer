@@ -10,15 +10,17 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from .configs import (
+from ..configs import (
     DEFAULT_DATA_ROOT,
     PROJECT_ROOT,
-    RESULTS_TABLES_DIR,
+    TRAIN_SCRIPT,
+    RESULTS_FINAL_TABLES_DIR,
+    RESULTS_INTERMEDIATE_TABLES_DIR,
     BaselineExperimentConfig,
     build_train_command,
     resolve_python_bin,
 )
-from .privacy_filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
+from .filters import apply_center_crop, apply_gaussian_blur, apply_mosaic
 
 
 FIXED_FILTERS = [
@@ -45,7 +47,7 @@ FIXED_FILTERS = [
 MODELS = ("resnet18", "swin_t", "vit_b_16")
 FIXED_DEID_EPOCHS = 10
 FIXED_DEID_RUN_SUFFIX = "fixed_deid"
-FIXED_DEID_CSV_PATH = PROJECT_ROOT / "results" / "deid_fixed_comparison.csv"
+FIXED_DEID_CSV_PATH = RESULTS_INTERMEDIATE_TABLES_DIR / "deid_fixed_comparison.csv"
 
 
 def fixed_filter_table() -> pd.DataFrame:
@@ -166,7 +168,7 @@ def build_command_table(
     data_root: Path = DEFAULT_DATA_ROOT,
     skip_completed: bool = True,
 ) -> pd.DataFrame:
-    train_script = train_script or PROJECT_ROOT / "train.py"
+    train_script = train_script or TRAIN_SCRIPT
     python_bin = python_bin or resolve_python_bin()
 
     rows = []
@@ -217,7 +219,7 @@ def run_configs(
     data_root: Path = DEFAULT_DATA_ROOT,
     skip_completed: bool = True,
 ) -> None:
-    train_script = train_script or PROJECT_ROOT / "train.py"
+    train_script = train_script or TRAIN_SCRIPT
     python_bin = python_bin or resolve_python_bin()
     configs = list(configs)
 
@@ -452,7 +454,9 @@ def plot_macro_f1_drop(comparison: pd.DataFrame) -> plt.Figure:
     return fig
 
 
-def load_results_summary(path: Path = RESULTS_TABLES_DIR / "results_summary.csv") -> pd.DataFrame:
+def load_results_summary(path: Path = RESULTS_FINAL_TABLES_DIR / "results_summary.csv") -> pd.DataFrame:
     if not path.exists():
-        raise FileNotFoundError(f"Missing results summary: {path}. Run make_plots.py first.")
+        raise FileNotFoundError(
+            f"Missing results summary: {path}. Run scripts/reporting/make_plots.py first."
+        )
     return pd.read_csv(path)

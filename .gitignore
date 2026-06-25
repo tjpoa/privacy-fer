@@ -25,6 +25,8 @@ __pycache__/
 /results/models/
 /results/evaluations/
 /results/*.csv
+/results/tables/attention/
+/results/tables/intermediate/
 /results/tables/evaluation_runs.csv
 /results/checkpoints/*
 !/results/checkpoints/.gitkeep

@@ -35,37 +35,35 @@ from torchvision.models import (
 )
 
 try:
-    from .configs import (
+    from ..configs import (
         BASELINE_PLOT_PATH,
         CLASS_NAMES,
         DEFAULT_DATA_ROOT,
         IMAGENET_MEAN,
         IMAGENET_STD,
         RESULTS_MODELS_DIR,
-        RESULTS_PLOTS_DIR,
         SUPPORTED_MODELS,
         SUPPORTED_PRIVACY_MODES,
         SUPPORTED_WEIGHTS,
         build_run_name,
         ensure_results_dirs,
     )
-    from .data_loader import RAFDataset
+    from ..data.loader import RAFDataset
 except ImportError:
-    from configs import (
+    from src.configs import (
         BASELINE_PLOT_PATH,
         CLASS_NAMES,
         DEFAULT_DATA_ROOT,
         IMAGENET_MEAN,
         IMAGENET_STD,
         RESULTS_MODELS_DIR,
-        RESULTS_PLOTS_DIR,
         SUPPORTED_MODELS,
         SUPPORTED_PRIVACY_MODES,
         SUPPORTED_WEIGHTS,
         build_run_name,
         ensure_results_dirs,
     )
-    from data_loader import RAFDataset
+    from src.data.loader import RAFDataset
 
 
 def parse_args() -> argparse.Namespace:

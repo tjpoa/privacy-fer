@@ -3,12 +3,18 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Subset
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.configs import (
     CLASS_NAMES,
@@ -19,8 +25,8 @@ from src.configs import (
     SUPPORTED_PRIVACY_MODES,
     ensure_results_dirs,
 )
-from src.data_loader import RAFDataset
-from src.train_baseline import (
+from src.data.loader import RAFDataset
+from src.modeling.training import (
     build_model,
     build_transform,
     evaluate_on_test,

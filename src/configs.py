@@ -9,6 +9,12 @@ import sys
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebooks"
+SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+TRAIN_SCRIPT = SCRIPTS_DIR / "training" / "train.py"
+EVALUATE_SCRIPT = SCRIPTS_DIR / "evaluation" / "evaluate.py"
+MAKE_PLOTS_SCRIPT = SCRIPTS_DIR / "reporting" / "make_plots.py"
+CHECK_DATA_LOADER_SCRIPT = SCRIPTS_DIR / "validation" / "check_data_loader.py"
+VALIDATE_FAIRNESS_SCRIPT = SCRIPTS_DIR / "validation" / "validate_fairness.py"
 
 DATA_DIR = PROJECT_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
@@ -22,7 +28,14 @@ RESULTS_MODELS_DIR = RESULTS_DIR / "models"
 RESULTS_PLOTS_DIR = RESULTS_DIR / "plots"
 RESULTS_TABLES_DIR = RESULTS_DIR / "tables"
 RESULTS_EVALUATIONS_DIR = RESULTS_DIR / "evaluations"
-BASELINE_PLOT_PATH = RESULTS_PLOTS_DIR / "baseline_metrics.png"
+RESULTS_TRAINING_PLOTS_DIR = RESULTS_PLOTS_DIR / "training"
+RESULTS_FINAL_PLOTS_DIR = RESULTS_PLOTS_DIR / "final"
+RESULTS_ATTENTION_PLOTS_DIR = RESULTS_PLOTS_DIR / "attention"
+RESULTS_FINAL_TABLES_DIR = RESULTS_TABLES_DIR / "final"
+RESULTS_VALIDATION_TABLES_DIR = RESULTS_TABLES_DIR / "validation"
+RESULTS_INTERMEDIATE_TABLES_DIR = RESULTS_TABLES_DIR / "intermediate"
+RESULTS_ATTENTION_TABLES_DIR = RESULTS_TABLES_DIR / "attention"
+BASELINE_PLOT_PATH = RESULTS_TRAINING_PLOTS_DIR / "baseline_metrics.png"
 
 VENV_PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 
@@ -75,6 +88,14 @@ def ensure_results_dirs() -> tuple[Path, Path]:
     RESULTS_MODELS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
     RESULTS_TABLES_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_EVALUATIONS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_TRAINING_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_FINAL_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_ATTENTION_PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_FINAL_TABLES_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_VALIDATION_TABLES_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_INTERMEDIATE_TABLES_DIR.mkdir(parents=True, exist_ok=True)
+    RESULTS_ATTENTION_TABLES_DIR.mkdir(parents=True, exist_ok=True)
     return RESULTS_MODELS_DIR, RESULTS_PLOTS_DIR
 
 
@@ -312,7 +333,7 @@ class BaselineExperimentConfig:
 
     @property
     def plot_path(self) -> Path:
-        return RESULTS_PLOTS_DIR / f"{self.run_name}_metrics.png"
+        return RESULTS_TRAINING_PLOTS_DIR / f"{self.run_name}_metrics.png"
 
     @property
     def metrics_path(self) -> Path:

@@ -11,8 +11,8 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 
 try:
-    from .configs import DEFAULT_DATA_ROOT
-    from .privacy_filters import (
+    from ..configs import DEFAULT_DATA_ROOT
+    from ..privacy.filters import (
         apply_canny_edges,
         apply_center_crop,
         apply_diffusion_noise,
@@ -20,8 +20,8 @@ try:
         apply_mosaic,
     )
 except ImportError:
-    from configs import DEFAULT_DATA_ROOT
-    from privacy_filters import (
+    from src.configs import DEFAULT_DATA_ROOT
+    from src.privacy.filters import (
         apply_canny_edges,
         apply_center_crop,
         apply_diffusion_noise,

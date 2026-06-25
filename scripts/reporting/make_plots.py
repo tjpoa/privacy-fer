@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import cv2
 import matplotlib
@@ -12,15 +13,29 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from src.configs import (
     CLASS_NAMES,
     DEFAULT_DATA_ROOT,
+    PROJECT_ROOT,
+    RESULTS_ATTENTION_TABLES_DIR,
+    RESULTS_FINAL_PLOTS_DIR,
+    RESULTS_FINAL_TABLES_DIR,
+    RESULTS_INTERMEDIATE_TABLES_DIR,
     RESULTS_MODELS_DIR,
-    RESULTS_PLOTS_DIR,
-    RESULTS_TABLES_DIR,
     ensure_results_dirs,
 )
-from src.privacy_filters import apply_canny_edges, apply_center_crop, apply_diffusion_noise, apply_gaussian_blur, apply_mosaic
+from src.privacy.filters import (
+    apply_canny_edges,
+    apply_center_crop,
+    apply_diffusion_noise,
+    apply_gaussian_blur,
+    apply_mosaic,
+)
 
 
 TRANSFORM_LABELS = {
@@ -54,13 +69,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--plots-dir",
         type=Path,
-        default=RESULTS_PLOTS_DIR,
+        default=RESULTS_FINAL_PLOTS_DIR,
         help="Directory where final plots are saved.",
     )
     parser.add_argument(
         "--tables-dir",
         type=Path,
-        default=RESULTS_TABLES_DIR,
+        default=RESULTS_FINAL_TABLES_DIR,
         help="Directory where final CSV tables are saved.",
     )
     parser.add_argument(
@@ -79,6 +94,12 @@ def parse_args() -> argparse.Namespace:
 
 def read_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def first_existing_path(preferred: Path, fallback: Path) -> Path:
+    if preferred.exists() or not fallback.exists():
+        return preferred
+    return fallback
 
 
 def is_smoke_run(payload: dict, path: Path) -> bool:
@@ -247,7 +268,10 @@ def _baseline_reference_from_rows(rows: list[dict[str, object]]) -> dict[str, fl
 def create_report_results_summary(df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict[str, object]] = []
 
-    baseline_path = Path("results/baseline_comparison.csv")
+    baseline_path = first_existing_path(
+        RESULTS_INTERMEDIATE_TABLES_DIR / "baseline_comparison.csv",
+        PROJECT_ROOT / "results" / "baseline_comparison.csv",
+    )
     if baseline_path.exists():
         baseline_df = pd.read_csv(baseline_path)
         for _, source in baseline_df.iterrows():
@@ -295,7 +319,10 @@ def create_report_results_summary(df: pd.DataFrame) -> pd.DataFrame:
 
     baseline_reference = _baseline_reference_from_rows(rows)
 
-    deid_fixed_path = Path("results/deid_fixed_comparison.csv")
+    deid_fixed_path = first_existing_path(
+        RESULTS_INTERMEDIATE_TABLES_DIR / "deid_fixed_comparison.csv",
+        PROJECT_ROOT / "results" / "deid_fixed_comparison.csv",
+    )
     if deid_fixed_path.exists():
         deid_df = pd.read_csv(deid_fixed_path)
         for _, source in deid_df.iterrows():
@@ -486,7 +513,10 @@ def plot_macro_f1_drop_by_transformation(df: pd.DataFrame, plots_dir: Path) -> P
 
 
 def plot_vit_confusion_from_predictions(plots_dir: Path) -> Path | None:
-    predictions_path = Path("results/vit_attention_predictions.csv")
+    predictions_path = first_existing_path(
+        RESULTS_ATTENTION_TABLES_DIR / "vit_attention_predictions.csv",
+        PROJECT_ROOT / "results" / "vit_attention_predictions.csv",
+    )
     if not predictions_path.exists():
         return None
 
@@ -539,7 +569,10 @@ def plot_vit_confusion_from_predictions(plots_dir: Path) -> Path | None:
 
 
 def plot_recall_by_emotion_from_predictions(plots_dir: Path) -> Path | None:
-    predictions_path = Path("results/vit_attention_predictions.csv")
+    predictions_path = first_existing_path(
+        RESULTS_ATTENTION_TABLES_DIR / "vit_attention_predictions.csv",
+        PROJECT_ROOT / "results" / "vit_attention_predictions.csv",
+    )
     if not predictions_path.exists():
         return None
 

@@ -6,8 +6,8 @@ import cv2
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from .configs import CLASS_NAMES, DEFAULT_DATA_ROOT
-from .data_loader import SUPPORTED_EXTENSIONS
+from ..configs import CLASS_NAMES, DEFAULT_DATA_ROOT
+from ..data.loader import SUPPORTED_EXTENSIONS
 
 
 SPLITS = ("train", "val", "test")

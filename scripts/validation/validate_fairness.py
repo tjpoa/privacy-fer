@@ -3,11 +3,24 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 
 import pandas as pd
 
-from src.configs import DEFAULT_DATA_ROOT, RESULTS_TABLES_DIR, ensure_results_dirs
-from src.data_loader import RAFDataset
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.configs import (
+    PROJECT_ROOT,
+    DEFAULT_DATA_ROOT,
+    RESULTS_FINAL_TABLES_DIR,
+    RESULTS_INTERMEDIATE_TABLES_DIR,
+    RESULTS_VALIDATION_TABLES_DIR,
+    ensure_results_dirs,
+)
+from src.data.loader import RAFDataset
 
 
 REPRESENTATIVE_TRANSFORMS = [
@@ -18,6 +31,13 @@ REPRESENTATIVE_TRANSFORMS = [
     ("canny", "edges", 0.0),
     ("noise", "noise", 100.0),
 ]
+
+
+def project_relative_path(path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(PROJECT_ROOT.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def parse_args() -> argparse.Namespace:
@@ -33,8 +53,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--tables-dir",
         type=Path,
-        default=RESULTS_TABLES_DIR,
-        help="Directory containing final tables and where validation reports are saved.",
+        default=RESULTS_FINAL_TABLES_DIR,
+        help="Directory containing final report tables.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=RESULTS_VALIDATION_TABLES_DIR,
+        help="Directory where validation reports are saved.",
     )
     return parser.parse_args()
 
@@ -164,8 +190,14 @@ def check_results_summary(tables_dir: Path) -> list[dict[str, object]]:
 
 
 def check_test_tuning_protocol(tables_dir: Path) -> list[dict[str, object]]:
-    proxy_path = Path("results/deid_proxy_selection.csv")
-    fixed_path = Path("results/deid_fixed_comparison.csv")
+    proxy_path = RESULTS_INTERMEDIATE_TABLES_DIR / "deid_proxy_selection.csv"
+    if not proxy_path.exists():
+        proxy_path = PROJECT_ROOT / "results" / "deid_proxy_selection.csv"
+
+    fixed_path = RESULTS_INTERMEDIATE_TABLES_DIR / "deid_fixed_comparison.csv"
+    if not fixed_path.exists():
+        fixed_path = PROJECT_ROOT / "results" / "deid_fixed_comparison.csv"
+
     checks: list[dict[str, object]] = []
 
     if proxy_path.exists():
@@ -180,7 +212,7 @@ def check_test_tuning_protocol(tables_dir: Path) -> list[dict[str, object]]:
             {
                 "check": "privacy_parameter_selection_has_validation_columns",
                 "status": "PASS" if has_validation_selection_columns else "WARN",
-                "evidence": f"{proxy_path}; columns={','.join(proxy_df.columns)}",
+                "evidence": f"{project_relative_path(proxy_path)}; columns={','.join(proxy_df.columns)}",
             }
         )
     else:
@@ -204,7 +236,7 @@ def check_test_tuning_protocol(tables_dir: Path) -> list[dict[str, object]]:
             {
                 "check": "final_deid_table_separates_validation_and_test_metrics",
                 "status": "PASS" if has_val_and_test else "WARN",
-                "evidence": f"{fixed_path}; rows={len(fixed_df)}",
+                "evidence": f"{project_relative_path(fixed_path)}; rows={len(fixed_df)}",
             }
         )
     else:
@@ -221,7 +253,7 @@ def check_test_tuning_protocol(tables_dir: Path) -> list[dict[str, object]]:
             "check": "test_set_not_used_for_tuning",
             "status": "WARN",
             "evidence": (
-                "Code-level evidence supports validation-based selection: train_baseline.py selects "
+                "Code-level evidence supports validation-based selection: src/modeling/training.py selects "
                 "best_epoch using validation macro-F1 and deid_proxy_selection.csv contains validation "
                 "selection columns. Human notebook decisions cannot be fully proven from artifacts alone; "
                 "report should state that parameter choices are based on validation metrics and test is reserved "
@@ -254,6 +286,7 @@ def main() -> None:
     args = parse_args()
     ensure_results_dirs()
     args.tables_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
 
     checks = []
     checks.extend(check_dataset_splits(args.data_root))
@@ -261,9 +294,9 @@ def main() -> None:
     checks.extend(check_test_tuning_protocol(args.tables_dir))
 
     checks_df = pd.DataFrame(checks)
-    csv_path = args.tables_dir / "fairness_validation.csv"
-    json_path = args.tables_dir / "fairness_validation_report.json"
-    md_path = args.tables_dir / "fairness_validation_report.md"
+    csv_path = args.output_dir / "fairness_validation.csv"
+    json_path = args.output_dir / "fairness_validation_report.json"
+    md_path = args.output_dir / "fairness_validation_report.md"
 
     checks_df.to_csv(csv_path, index=False)
     json_path.write_text(json.dumps(checks, indent=2), encoding="utf-8")

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import torch
 
-from .attention_analysis import (
+from .analysis import (
     AttentionCondition,
     apply_attention_mask,
     apply_condition_filter,
@@ -22,20 +22,21 @@ from .attention_analysis import (
     read_grayscale_image,
     vit_attention_map,
 )
-from .configs import (
+from ..configs import (
     CLASS_NAMES,
     DEFAULT_DATA_ROOT,
     PROJECT_ROOT,
-    RESULTS_PLOTS_DIR,
+    RESULTS_ATTENTION_PLOTS_DIR,
+    RESULTS_ATTENTION_TABLES_DIR,
     BaselineExperimentConfig,
 )
-from .landmark_attention_analysis import (
+from .landmarks import (
     REGION_ORDER,
     compute_landmark_attention_metrics,
     create_face_landmarker,
     is_mediapipe_available,
 )
-from .privacy_reporting import (
+from ..privacy.reporting import (
     FIXED_DEID_EPOCHS,
     FIXED_DEID_RUN_SUFFIX,
     build_fixed_deid_comparison,
@@ -50,8 +51,8 @@ ATTENTION_FILTERS = [
     {"label": "Mosaic", "mode": "mosaic", "intensity": 8.0},
 ]
 
-ATTENTION_DIR = RESULTS_PLOTS_DIR / "vit_attention_analysis"
-PREDICTIONS_CSV_PATH = PROJECT_ROOT / "results" / "vit_attention_predictions.csv"
+ATTENTION_DIR = RESULTS_ATTENTION_PLOTS_DIR / "vit_attention_analysis"
+PREDICTIONS_CSV_PATH = RESULTS_ATTENTION_TABLES_DIR / "vit_attention_predictions.csv"
 LANDMARKER_MODEL_PATH = PROJECT_ROOT / "models" / "face_landmarker.task"
 
 
@@ -76,12 +77,12 @@ class AttentionOutputPaths:
             example_set_name=slug,
             attention_dir=attention_dir,
             predictions_csv=PREDICTIONS_CSV_PATH,
-            selected_examples_csv=PROJECT_ROOT / "results" / f"vit_attention_selected_examples_{slug}.csv",
-            attention_metrics_csv=PROJECT_ROOT / "results" / f"vit_attention_metrics_{slug}.csv",
+            selected_examples_csv=RESULTS_ATTENTION_TABLES_DIR / f"vit_attention_selected_examples_{slug}.csv",
+            attention_metrics_csv=RESULTS_ATTENTION_TABLES_DIR / f"vit_attention_metrics_{slug}.csv",
             attention_metrics_plot=attention_dir / "vit_attention_entropy_similarity.png",
-            inverse_attention_csv=PROJECT_ROOT / "results" / f"vit_inverse_attention_masking_{slug}.csv",
+            inverse_attention_csv=RESULTS_ATTENTION_TABLES_DIR / f"vit_inverse_attention_masking_{slug}.csv",
             inverse_attention_dir=attention_dir / "inverse_attention_masking",
-            landmark_attention_csv=PROJECT_ROOT / "results" / f"vit_landmark_region_attention_{slug}.csv",
+            landmark_attention_csv=RESULTS_ATTENTION_TABLES_DIR / f"vit_landmark_region_attention_{slug}.csv",
             landmark_attention_plot=attention_dir / "vit_landmark_region_attention.png",
         )
 

@@ -9,10 +9,11 @@ from typing import Iterable
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from .configs import (
+from ..configs import (
     DEFAULT_DATA_ROOT,
     PROJECT_ROOT,
-    RESULTS_TABLES_DIR,
+    RESULTS_FINAL_TABLES_DIR,
+    TRAIN_SCRIPT,
     BaselineExperimentConfig,
     build_train_command,
     resolve_python_bin,
@@ -98,7 +99,7 @@ def build_command_table(
     data_root: Path = DEFAULT_DATA_ROOT,
     skip_completed: bool = True,
 ) -> pd.DataFrame:
-    train_script = train_script or PROJECT_ROOT / "train.py"
+    train_script = train_script or TRAIN_SCRIPT
     python_bin = python_bin or resolve_python_bin()
 
     rows = []
@@ -146,7 +147,7 @@ def run_selected_experiments(
     data_root: Path = DEFAULT_DATA_ROOT,
     skip_completed: bool = True,
 ) -> None:
-    train_script = train_script or PROJECT_ROOT / "train.py"
+    train_script = train_script or TRAIN_SCRIPT
     python_bin = python_bin or resolve_python_bin()
     configs = list(configs)
 
@@ -228,11 +229,11 @@ def load_completed_metrics() -> pd.DataFrame:
 
 
 def load_results_summary(
-    path: Path = RESULTS_TABLES_DIR / "results_summary.csv",
+    path: Path = RESULTS_FINAL_TABLES_DIR / "results_summary.csv",
 ) -> pd.DataFrame:
     if not path.exists():
         raise FileNotFoundError(
-            f"Results summary not found: {path}. Run make_plots.py first."
+            f"Results summary not found: {path}. Run scripts/reporting/make_plots.py first."
         )
     return pd.read_csv(path)
 
