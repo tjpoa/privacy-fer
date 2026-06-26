@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 import sys
 
@@ -25,17 +26,30 @@ PRIVACY_CHECKS = (
 )
 
 
-def check_dataset_root() -> None:
-    if not DEFAULT_DATA_ROOT.exists():
-        raise FileNotFoundError(f"Dataset root not found: {DEFAULT_DATA_ROOT}")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Run a quick sanity check for the RAF-style dataset and DataLoader."
+    )
+    parser.add_argument(
+        "--data-root",
+        type=Path,
+        default=DEFAULT_DATA_ROOT,
+        help="Dataset root containing train/val/test folders.",
+    )
+    return parser.parse_args()
 
-    print(f"Dataset root: {DEFAULT_DATA_ROOT}")
+
+def check_dataset_root(data_root: Path) -> None:
+    if not data_root.exists():
+        raise FileNotFoundError(f"Dataset root not found: {data_root}")
+
+    print(f"Dataset root: {data_root}")
 
 
-def check_split_sizes() -> None:
+def check_split_sizes(data_root: Path) -> None:
     print("\nSplit sizes:")
     for split in SPLITS:
-        dataset = RAFDataset(root_dir=DEFAULT_DATA_ROOT, split=split)
+        dataset = RAFDataset(root_dir=data_root, split=split)
         distribution = dataset.get_class_distribution()
         is_balanced = len(set(distribution.values())) == 1
 
@@ -50,10 +64,10 @@ def check_split_sizes() -> None:
             )
 
 
-def check_metadata_and_filters() -> None:
+def check_metadata_and_filters(data_root: Path) -> None:
     print("\nPrivacy filter sanity check:")
     baseline = RAFDataset(
-        root_dir=DEFAULT_DATA_ROOT,
+        root_dir=data_root,
         split="train",
         mode="none",
         return_metadata=True,
@@ -68,7 +82,7 @@ def check_metadata_and_filters() -> None:
 
     for label, mode, intensity in PRIVACY_CHECKS:
         dataset = RAFDataset(
-            root_dir=DEFAULT_DATA_ROOT,
+            root_dir=data_root,
             split="train",
             mode=mode,
             intensity=intensity,
@@ -89,10 +103,10 @@ def check_metadata_and_filters() -> None:
         )
 
 
-def check_batch_loading() -> None:
+def check_batch_loading(data_root: Path) -> None:
     print("\nDataLoader batch check:")
     loader = create_data_loader(
-        root_dir=DEFAULT_DATA_ROOT,
+        root_dir=data_root,
         split="train",
         batch_size=8,
         mode="crop",
@@ -115,10 +129,11 @@ def check_batch_loading() -> None:
 
 
 def main() -> None:
-    check_dataset_root()
-    check_split_sizes()
-    check_metadata_and_filters()
-    check_batch_loading()
+    args = parse_args()
+    check_dataset_root(args.data_root)
+    check_split_sizes(args.data_root)
+    check_metadata_and_filters(args.data_root)
+    check_batch_loading(args.data_root)
     print("\nDataLoader sanity check passed.")
 
 

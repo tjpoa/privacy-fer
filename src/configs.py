@@ -10,6 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 NOTEBOOKS_DIR = PROJECT_ROOT / "notebooks"
 SCRIPTS_DIR = PROJECT_ROOT / "scripts"
+RUN_PIPELINE_SCRIPT = SCRIPTS_DIR / "run_pipeline.py"
 TRAIN_SCRIPT = SCRIPTS_DIR / "training" / "train.py"
 EVALUATE_SCRIPT = SCRIPTS_DIR / "evaluation" / "evaluate.py"
 MAKE_PLOTS_SCRIPT = SCRIPTS_DIR / "reporting" / "make_plots.py"

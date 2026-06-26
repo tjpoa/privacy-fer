@@ -45,6 +45,7 @@ privacy-fer/
 |   |   |-- filters.py
 |   |   |-- reporting.py
 |-- scripts/
+|   |-- run_pipeline.py
 |   |-- evaluation/
 |   |   |-- evaluate.py
 |   |-- reporting/
@@ -62,6 +63,7 @@ privacy-fer/
 Use these files as the reproducible project pipeline:
 
 - `scripts/training/train.py`: train ResNet18, MobileNetV3-Large, Swin-T or ViT-B/16.
+- `scripts/run_pipeline.py`: run the main reproducible pipeline from one command.
 - `scripts/validation/check_data_loader.py`: run a quick sanity check for `RAFDataset`, privacy filters and DataLoader batches.
 - `scripts/evaluation/evaluate.py`: evaluate a saved checkpoint on `train`, `val` or `test`.
 - `scripts/reporting/make_plots.py`: regenerate the final reporting tables and figures.
@@ -72,6 +74,36 @@ Use these files as the reproducible project pipeline:
 - `notebooks/04_AttentionMaps.ipynb`: qualitative and quantitative ViT attention/landmark analysis.
 
 Generated checkpoints, plots and evaluation scratch files are ignored by Git. The report-ready numeric outputs are kept in `results/tables/final/`.
+
+## One-Command Pipeline
+
+For a quick reproducibility pass, run:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run_pipeline.py
+```
+
+This command:
+
+```text
+1. checks the dataset and DataLoader;
+2. regenerates final tables and plots from saved metrics;
+3. validates split consistency and comparison fairness.
+```
+
+Training is skipped by default because the full training pipeline can take several hours. To run training as part of the same command, use:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run_pipeline.py --include-training
+```
+
+To run from scratch and download the dataset first:
+
+```powershell
+.\.venv\Scripts\python.exe .\scripts\run_pipeline.py --download-data --include-training
+```
+
+Completed training runs are skipped by default when their metrics already exist. Use `--no-skip-completed` only if you intentionally want to retrain everything.
 
 ## Environment Setup
 
